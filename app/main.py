@@ -1,7 +1,9 @@
 import re
 import json
 import time
+from typing import Dict, List
 from fastapi import FastAPI, HTTPException
+from app.database.connection import query
 from app.schemas import PromptRequest
 from app.prompts import identify_topic_prompt, expand_topic_prompt
 from app.llm_service import run_ollama
@@ -37,3 +39,15 @@ def analyze_prompt(data: PromptRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/maps", response_model=List[Dict])
+def listar_maps():
+    sql = """
+        SELECT uuid, focus_question, m.created,
+               t.name AS topic_central_name
+        FROM maps m
+        JOIN topics t ON t.id = m.topic_id_central
+        ORDER BY created DESC
+    """
+    return query(sql)
+    
