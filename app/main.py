@@ -1,4 +1,3 @@
-# app/main.py
 from fastapi import FastAPI
 from app.llm.router import router as llm_router
 from app.maps.router import router as maps_router
