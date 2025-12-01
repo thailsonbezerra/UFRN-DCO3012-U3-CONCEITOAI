@@ -4,22 +4,18 @@ import os
 from typing import Generator
 from dotenv import load_dotenv
 
-load_dotenv()  # ← lê o .env
+load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("FALHA AO CARREGAR DATABASE_URL DA VARIÁVEL DE AMBIENTE")
 
-def get_db() -> Generator:
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-    try:
-        yield conn
-    finally:
-        conn.close()
+def get_connection():
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
-# Função auxiliar pra usar direto (mais simples no começo)
+
 def query(sql: str, params=None, fetch_one=False):
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    conn = get_connection()
     try:
         with conn:
             with conn.cursor() as cur:
@@ -29,3 +25,28 @@ def query(sql: str, params=None, fetch_one=False):
                 return cur.fetchall()
     except Exception as e:
         raise RuntimeError(f"Erro no banco: {e}")
+
+class Transaction:
+    def __init__(self):
+        self.conn = get_connection()
+        self.cur = self.conn.cursor()
+
+    def execute(self, sql, params=None, fetch_one=False):
+        self.cur.execute(sql, params or ())
+        if fetch_one:
+            return self.cur.fetchone()
+        return None
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
+
+    def close(self):
+        self.cur.close()
+        self.conn.close()
+
+
+def transaction() -> Transaction:
+    return Transaction()

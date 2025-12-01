@@ -1,8 +1,67 @@
-from app.database.connection import query
+from app.database.connection import query, transaction
 from typing import List, Dict
 from uuid import UUID
 from fastapi import HTTPException
 
+def create_map(focus_question: str, central_topic_name: str) -> dict:
+    tx = transaction()
+    try:
+        # 1. Criar mapa e retornar tudo que vamos usar
+        mapa = tx.execute(
+            """
+            INSERT INTO maps (focus_question)
+            VALUES (%s)
+            RETURNING id, uuid, created, focus_question
+            """,
+            (focus_question,),
+            fetch_one=True
+        )
+        map_id = mapa["id"]
+        map_uuid = mapa["uuid"]
+
+        # 2. Criar tópico central
+        topic = tx.execute(
+            """
+            INSERT INTO topics (map_id, name)
+            VALUES (%s, %s)
+            RETURNING id, name
+            """,
+            (map_id, central_topic_name.strip().capitalize()),
+            fetch_one=True
+        )
+        topic_id = topic["id"]
+
+        # 3. Associar tópico central ao mapa
+        tx.execute(
+            "UPDATE maps SET topic_id_central = %s WHERE id = %s",
+            (topic_id, map_id)
+        )
+
+        # 4. Commit
+        tx.commit()
+
+        # 5. Retorno limpo e completo
+        return {
+            "map": {
+                "uuid": str(map_uuid),
+                "focus_question": mapa["focus_question"],
+                "created": mapa["created"].isoformat(),
+                "central_topic": {
+                    "id": topic["id"],
+                    "name": topic["name"]
+                }
+            },
+            "nodes": [
+                {"id": topic["id"], "name": topic["name"]}
+            ],
+            "links": []
+        }
+
+    except Exception as e:
+        tx.rollback()
+        raise HTTPException(status_code=500, detail=f"Erro ao criar mapa: {str(e)}")
+    finally:
+        tx.close()
 def listar_mapas() -> List[Dict]:
     sql = """
         SELECT 
