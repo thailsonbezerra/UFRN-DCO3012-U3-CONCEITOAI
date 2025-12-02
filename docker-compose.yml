@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  conceito-api:
+    build: .
+    container_name: conceito-api
+    ports:
+      - "8000:8000"
+    shm_size: '1gb'
+    volumes:
+      - ./:/app
+    environment:
+      - YOLO_CONFIG_DIR=/tmp
+      - YOLO_DISABLE_DOWNLOADS=1
+      - PYTHONPATH=/app  # Garante que Python encontre os módulos
+    restart: unless-stopped
