@@ -7,6 +7,6 @@ app = FastAPI(title="ConceitoAI")
 app.include_router(llm_router)
 app.include_router(maps_router)
 
-@app.get("/")
+@app.get("/health")
 def root():
-    return {"message": "ConceitoAI dominando o mundo"}
+    return {"message": "ConceitoAI is healthy!"}
