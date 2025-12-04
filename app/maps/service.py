@@ -102,10 +102,18 @@ def get_map_by_uuid(map_uuid: UUID) -> Dict:
 
     # 2. Todos os tópicos deste mapa
     nodes = query(
-        "SELECT id, name FROM topics WHERE map_id = %s ORDER BY id",
+        """
+        SELECT 
+            id, 
+            name, 
+            COALESCE(position_x, 0) AS position_x,
+            COALESCE(position_y, 0) AS position_y
+        FROM topics 
+        WHERE map_id = %s 
+        ORDER BY id
+        """,
         [map_id]
     )
-
     # 3. Todas as proposições deste mapa
     links = query(
         """
@@ -130,7 +138,15 @@ def get_map_by_uuid(map_uuid: UUID) -> Dict:
                 "name": mapa["central_topic_name"]
             } if mapa["topic_id_central"] else None
         },
-        "nodes": [{"id": n["id"], "name": n["name"]} for n in nodes],
+        "nodes": [
+            {
+                "id": n["id"], 
+                "name": n["name"],
+                "position_x": float(n["position_x"]),
+                "position_y": float(n["position_y"])
+            } 
+            for n in nodes
+        ],
         "links": [
             {
                 "id": l["id"],
@@ -183,6 +199,27 @@ def update_topic(map_uuid: UUID, topic_id: int, name: str):
         raise HTTPException(404, "Tópico não encontrado")
     
     return {"id": topic_id, "name": name}
+
+def update_topic_position(map_uuid: UUID, topic_id: int, x: float, y: float):
+    result = query(
+        """
+        UPDATE topics
+        SET position_x = %s, position_y = %s
+        WHERE id = %s 
+          AND map_id = (SELECT id FROM maps WHERE uuid = %s)
+        RETURNING id, name, position_x, position_y
+        """,
+        [x, y, topic_id, str(map_uuid)],
+        fetch_one=True
+    )
+    if not result:
+        raise HTTPException(404, "Tópico não encontrado ou não pertence ao mapa")
+    return {
+        "id": result["id"],
+        "name": result["name"],
+        "position_x": float(result["position_x"]),
+        "position_y": float(result["position_y"])
+    }
 
 def delete_topic(map_uuid: UUID, topic_id: int):
     tx = transaction()

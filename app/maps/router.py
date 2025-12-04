@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from uuid import UUID
 from typing import List, Dict
 
-from app.maps.schemas import CreateMapSchema, CreateTopicSchema, UpdateTopicSchema, CreatePropositionSchema, UpdatePropositionSchema
+from app.maps.schemas import CreateMapSchema, CreateTopicSchema, UpdateTopicPositionSchema, UpdateTopicSchema, CreatePropositionSchema, UpdatePropositionSchema
 from app.maps.service import (
     listar_mapas,
     get_map_by_uuid,
@@ -12,7 +12,8 @@ from app.maps.service import (
     delete_topic,
     create_proposition,
     update_proposition,
-    delete_proposition
+    delete_proposition,
+    update_topic_position
 )
 
 router = APIRouter(prefix="/maps", tags=["Mapas"])
@@ -63,6 +64,19 @@ def atualizar_topico(map_uuid: UUID, topic_id: int, data: UpdateTopicSchema):
         raise e
     except Exception:
         raise HTTPException(status_code=500, detail="Erro ao atualizar tópico")
+    
+@router.patch("/{map_uuid}/topics/{topic_id}/position", summary="Atualiza apenas a posição do tópico")
+def atualizar_posicao_topico(
+    map_uuid: UUID, 
+    topic_id: int, 
+    data: UpdateTopicPositionSchema
+):
+    try:
+        return update_topic_position(map_uuid, topic_id, data.x, data.y)
+    except HTTPException as e:
+        raise e
+    except Exception:
+        raise HTTPException(status_code=500, detail="Erro ao salvar posição")
 
 
 @router.delete("/{map_uuid}/topics/{topic_id}", summary="Remove um tópico do mapa")

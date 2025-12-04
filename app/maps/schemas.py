@@ -13,6 +13,10 @@ class CreateTopicSchema(BaseModel):
 
 class UpdateTopicSchema(BaseModel):
     name: str
+    
+class UpdateTopicPositionSchema(BaseModel):
+    x: float
+    y: float
 
 class CreatePropositionSchema(BaseModel):
     source: int
